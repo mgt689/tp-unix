@@ -1,0 +1,18 @@
+#!/bin/bash
+
+PORT=12345
+
+trap "echo -e ' \nArrêt du serveur.'; exit" SIGINT
+
+echo "Serveur sur le port  $PORT..."
+
+while true; do
+    {
+      DATE=$(date)
+      echo "Connexion le : $DATE"
+      echo "Bienvenue sur le serveur TCP !"
+    }   | nc -l -p "$PORT"
+   echo "client déconecté..."
+done
+
+
