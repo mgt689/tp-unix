@@ -1,0 +1,49 @@
+#!/bin/bash
+
+PORT=12345
+CONFIG_FILE="config.txt"
+
+# Lecture du mot de passe depuis le fichier de config
+if [[ -f "$CONFIG_FILE" ]]; then
+source "$CONFIG_FILE"
+else
+echo "Fichier de configuration introuvable : $CONFIG_FILE"
+exit 1
+fi
+
+echo "Serveur TCP lancé sur le port $PORT..."
+
+while true; do
+# On utilise un fichier temporaire pour envoyer des messages au client
+tmpfifo=$(mktemp -u)
+mkfifo "$tmpfifo"
+
+# Le serveur écoute et écrit dans le FIFO en parallèle
+nc -l localhost "$PORT" < "$tmpfifo" | (
+exec 3>"$tmpfifo" # fd 3 écrit dans le FIFO (donc vers le client)
+
+# Lire le mot de passe
+read motdepasse_client
+if [[ "$motdepasse_client" != "$password" ]]; then
+echo "Mot de passe incorrect. Connexion refusée." >&3
+exec 3>&- # fermer proprement
+rm "$tmpfifo"
+exit 1
+fi
+
+DATE=$(date)
+echo "Connexion le : $DATE" >&3
+echo "Bienvenue sur le serveur TCP !" >&3
+echo "Vous pouvez maintenant taper des commandes Linux :" >&3
+
+while read commande; do
+echo "Commande reçue : $commande" >&3
+resultat=$(eval "$commande" 2>&1)
+echo "$resultat" >&3
+done
+
+echo "Client déconnecté." >&3
+exec 3>&- # Fermer le FIFO proprement
+rm "$tmpfifo"
+)
+done
