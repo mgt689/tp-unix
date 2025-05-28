@@ -4,17 +4,17 @@ PORT=12345
 echo "Serveur TCP lancé sur le port $PORT..."
 
 while true; do
-nc -l localhost "$PORT" | while read commande; do
+coproc nc -l localhost "$PORT"
+
 DATE=$(date)
-echo "1+2" | bc
+echo "Connexion le : $DATE" >&"${COPROC[1]}"
+echo "Bienvenue sur le serveur TCP !" >&"${COPROC[1]}"
 
-echo "Connexion le : $DATE"
-echo "Bienvenue sur le serveur TCP !"
-
-echo "Commande reçue : $commande"
-
-resultat=$(eval "$commande" 2>&1) # Exécution + capture des erreurs
-echo "$resultat"
+while read -r commande <&"${COPROC[0]}"; do
+echo "Commande reçue : $commande" >&"${COPROC[1]}"
+resultat=$(eval "$commande" 2>&1)
+echo "$resultat" >&"${COPROC[1]}"
 done
+
 echo "Client déconnecté..."
 done
