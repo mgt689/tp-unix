@@ -1,0 +1,76 @@
+#!/bin/bash
+PORT=12345
+HOST="localhost"
+
+# Fonction de chiffrement monoalphabétique
+encrypt() {
+local texte="$1"
+local res=""
+local alphabet="abcdefghijklmnopqrstuvwxyz"
+
+for ((i=0; i<${#texte}; i++)); do
+c="${texte:$i:1}"
+if [[ "$c" =~ [a-z] ]]; then
+pos=$(expr index "$alphabet" "$c")
+res+="${key:$((pos-1)):1}"
+else
+res+="$c"
+fi
+done
+echo "$res"
+}
+
+# Fonction de déchiffrement monoalphabétique
+decrypt() {
+local texte="$1"
+local res=""
+local alphabet="abcdefghijklmnopqrstuvwxyz"
+
+for ((i=0; i<${#texte}; i++)); do
+c="${texte:$i:1}"
+if [[ "$c" =~ [a-z] ]]; then
+pos=$(expr index "$key" "$c")
+if [[ $pos -gt 0 ]]; then
+res+="${alphabet:$((pos-1)):1}"
+else
+res+="$c"
+fi
+else
+res+="$c"
+fi
+done
+echo "$res"
+}
+
+# Lire mot de passe et clé
+read -p "Mot de passe : " password
+read -p "Clé de chiffrement (26 lettres, permutation de a-z) : " key
+
+# Créer une FIFO temporaire
+tmpfifo=$(mktemp -u)
+mkfifo "$tmpfifo"
+
+# Lance la connexion Netcat
+cat "$tmpfifo" | nc "$HOST" "$PORT" | while read ligne; do
+echo "$(decrypt "$ligne")"
+done &
+
+exec 3>"$tmpfifo" # Pour envoyer au serveur
+
+# Envoyer le mot de passe et la clé
+echo "$password" >&3
+echo "$key" >&3
+
+# Boucle de saisie
+while true; do
+echo -n "> "
+read commande
+if [[ "$commande" == "exit" ]]; then
+break
+fi
+commande_chiffree=$(encrypt "$commande")
+echo "$commande_chiffree" >&3
+done
+
+exec 3>&-
+rm "$tmpfifo"
