@@ -1,0 +1,2 @@
+password=motsdepasse123
+key=phqgiumeaylnofdxjkrcvstzwb
